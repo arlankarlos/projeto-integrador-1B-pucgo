@@ -30,6 +30,34 @@ def read_user_full_address():
     return (logradouro, numero, complemento, bairro, cep, cidade, estado)
 
 
+# Função ler usuario_id da tabela usuarios e endereço_id da tabela endereco
+def get_usuario_id_endereco_id(connection):
+    #Retrieves the latest user ID and address ID from the "usuarios" and "endereco" tables,
+    # respectively, and returns them as a tuple.
+    #This function is used to get the IDs needed to create a new user-address
+    # relationship in the "usuarioendereco" table.
+
+    query = create_read_query("usuarios", ["usuario_id"])
+    result = read_data(connection, query)
+    result.sort()
+    usuario_id = result[-1][0]
+    query = create_read_query("endereco", ["endereco_id"])
+    result = read_data(connection, query)
+    result.sort()
+    endereco_id = result[-1][0]
+    return (usuario_id, endereco_id)
+
+
+# Função tabela de relacionamento usuarioendereco
+def create_user_address(connection):
+    query = create_insert_query(
+        "usuarioendereco", ["usuario_id", "endereco_id"]
+    )
+    values = get_usuario_id_endereco_id(connection)
+    insert_data(connection, query, values)
+
+
+
 # Função para criar novo usuário
 def create_user(connection):
     query = create_insert_query(
@@ -43,26 +71,4 @@ def create_user(connection):
     )
     values = read_user_full_address()
     insert_data(connection, query, values)
-
-
-
-# Função ler usuario_id da tabela usuarios e endereço_id da tabela endereco
-def read_user_address_id(connection):
-    query = create_read_query("usuarios", ["usuario_id"])
-    result = read_data(connection, query)
-    result.sort()
-    usuario_id = result[-1][0]
-    query = create_read_query("endereco", ["endereco_id"])
-    result = read_data(connection, query)
-    result.sort()
-    endereco_id = result[-1][0]
-    return (usuario_id, endereco_id)
-
-# Função tabela de relacionamento usuarioendereco
-def create_user_address(connection):
-    query = create_insert_query(
-        "usuarioendereco", ["usuario_id", "endereco_id"]
-    )
-    values = read_user_address_id(connection)
-    insert_data(connection, query, values)
-
+    create_user_address(connection)

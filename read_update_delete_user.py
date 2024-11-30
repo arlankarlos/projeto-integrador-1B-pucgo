@@ -49,6 +49,8 @@ def print_user(
     connection, nome=None, usuario_id=None, email=None, status=None, telefone=None
 ):
     result = read_user(connection, nome, usuario_id, email, status, telefone)
+    if not result:
+        return False
     for row in result:
         print(f"Usuário ID: {row[0]}")
         print(f"Nome: {row[1]}")
@@ -57,110 +59,144 @@ def print_user(
         print(f"Data de cadastro: {row[4]}")
         print(f"Status: {row[5]}")
         print_user_address(connection, row[0])
-        print(*"*" * 50)
         print("\n")
+
+    return True
 
 
 # Função atualizar dados do usuário usando função read_user para encontrar o usuário pelo nome,
 # ou pelo usuario_id, ou pelo email, ou pelo status, ou pelo telefone, todos padrao None
-def update_user(connection, usuario_id=None, email=None):
-    # Primeiro, verificar se o usuário existe
+# def update_user(connection, usuario_id=None, email=None):
+#     if not connection or not connection.is_connected():
+#         print("[Erro] Conexão com o banco de dados não está disponível.")
+#         return False
+#     # Primeiro, verificar se o usuário existe
+#     result = read_user(connection, usuario_id=usuario_id, email=email)
+#     if not result:
+#         print("Usuário não encontrado.")
+#         return False
+
+#     for row in result:
+#         # Exibir dados atuais do usuário
+#         print("\n=== Dados Atuais do Usuário ===")
+#         print(f"Usuário ID: {row[0]}")
+#         print(f"Nome: {row[1]}")
+#         print(f"Email: {row[2]}")
+#         print(f"Telefone: ({row[3][:2]}) {row[3][2:7]}-{row[3][7:]}")
+#         print(f"Data de cadastro: {row[4]}")
+#         print(f"Status: {row[5]}")
+#         print("\n=== Endereço Atual ===")
+#         print_user_address(connection, row[0])
+#         print("=" * 50)
+
+#         # Confirmar atualização
+#         if not confirm_action("Deseja atualizar o usuário?"):
+#             continue
+
+#         # Dicionário para armazenar as alterações
+#         updates = {}
+
+#         while True:
+#             print("\nOpções de atualização:")
+#             print("1 - Nome")
+#             print("2 - Email")
+#             print("3 - Telefone")
+#             print("4 - Status")
+#             print("5 - Endereço")
+#             print("0 - Finalizar alterações")
+
+#             opcao = input("Escolha uma opção (0-5): ").strip()
+
+#             if opcao == "0":
+#                 break
+
+#             if opcao not in ["1", "2", "3", "4", "5"]:
+#                 print("Opção inválida!")
+#                 continue
+
+#             if opcao == "1":
+#                 novo_nome = input("Novo nome: ").strip()
+#                 if novo_nome:
+#                     updates["nome"] = novo_nome
+
+#             elif opcao == "2":
+#                 novo_email = input("Novo email: ").strip()
+#                 if novo_email:
+#                     updates["email"] = novo_email
+
+#             elif opcao == "3":
+#                 novo_telefone = input("Novo telefone (apenas números): ").strip()
+#                 if novo_telefone.isdigit() and len(novo_telefone) == 11:
+#                     updates["telefone"] = novo_telefone
+#                 else:
+#                     print("Telefone inválido! Use apenas números (11 dígitos)")
+
+#             elif opcao == "4":
+#                 novo_status = (
+#                     input("Novo status (Ativo/Inativo): ").strip().capitalize()
+#                 )
+#                 if novo_status in ["Ativo", "Inativo"]:
+#                     updates["status_usuario"] = novo_status
+#                 else:
+#                     print("Status inválido! Use 'Ativo' ou 'Inativo'")
+
+#             elif opcao == "5":
+#                 atualizar_endereco(connection, row[0])
+
+#         # Realizar atualização no banco de dados
+#         if updates:
+#             try:
+#                 condition = f"usuario_id = {row[0]}"
+#                 query = create_update_query("usuarios", updates.keys(), condition)
+#                 update_data(connection, query, tuple(updates.values()))
+#                 print("\nUsuário atualizado com sucesso!")
+
+#                 # Exibir dados atualizados
+#                 print("\n=== Dados Atualizados ===")
+#                 result = read_user(connection, usuario_id=row[0])
+#                 for updated_row in result:
+#                     print(f"Nome: {updated_row[1]}")
+#                     print(f"Email: {updated_row[2]}")
+#                     print(
+#                         f"Telefone: ({updated_row[3][:2]}) {updated_row[3][2:7]}-{updated_row[3][7:]}"
+#                     )
+#                     print(f"Status: {updated_row[5]}")
+
+#             except Exception as e:
+#                 print(f"Erro ao atualizar usuário: {str(e)}")
+#                 return False
+
+#     return True
+
+def update_user(connection, usuario_id=None, email=None, updates=None):
+    """
+    Atualiza os dados do usuário
+    :param connection: Conexão com o banco de dados
+    :param usuario_id: ID do usuário (opcional)
+    :param email: Email do usuário (opcional)
+    :param updates: Dicionário com os campos a serem atualizados
+    :return: True se a atualização foi bem-sucedida, False caso contrário
+    """
+    # Verificar se o usuário existe
     result = read_user(connection, usuario_id=usuario_id, email=email)
     if not result:
         print("Usuário não encontrado.")
         return False
 
-    for row in result:
-        # Exibir dados atuais do usuário
-        print("\n=== Dados Atuais do Usuário ===")
-        print(f"Usuário ID: {row[0]}")
-        print(f"Nome: {row[1]}")
-        print(f"Email: {row[2]}")
-        print(f"Telefone: ({row[3][:2]}) {row[3][2:7]}-{row[3][7:]}")
-        print(f"Data de cadastro: {row[4]}")
-        print(f"Status: {row[5]}")
-        print("\n=== Endereço Atual ===")
-        print_user_address(connection, row[0])
-        print("=" * 50)
+    row = result[0]
 
-        # Confirmar atualização
-        if not confirm_action("Deseja atualizar o usuário?"):
-            continue
+    if updates:
+        try:
+            condition = f"usuario_id = {row[0]}"
+            query = create_update_query("usuarios", updates.keys(), condition)
+            update_data(connection, query, tuple(updates.values()))
+            print("\nUsuário atualizado com sucesso!")
+            return True
+        except Exception as e:
+            print(f"Erro ao atualizar usuário: {str(e)}")
+            return False
 
-        # Dicionário para armazenar as alterações
-        updates = {}
-
-        while True:
-            print("\nOpções de atualização:")
-            print("1 - Nome")
-            print("2 - Email")
-            print("3 - Telefone")
-            print("4 - Status")
-            print("5 - Endereço")
-            print("0 - Finalizar alterações")
-
-            opcao = input("Escolha uma opção (0-5): ").strip()
-
-            if opcao == "0":
-                break
-
-            if opcao not in ["1", "2", "3", "4", "5"]:
-                print("Opção inválida!")
-                continue
-
-            if opcao == "1":
-                novo_nome = input("Novo nome: ").strip()
-                if novo_nome:
-                    updates["nome"] = novo_nome
-
-            elif opcao == "2":
-                novo_email = input("Novo email: ").strip()
-                if novo_email:
-                    updates["email"] = novo_email
-
-            elif opcao == "3":
-                novo_telefone = input("Novo telefone (apenas números): ").strip()
-                if novo_telefone.isdigit() and len(novo_telefone) == 11:
-                    updates["telefone"] = novo_telefone
-                else:
-                    print("Telefone inválido! Use apenas números (11 dígitos)")
-
-            elif opcao == "4":
-                novo_status = (
-                    input("Novo status (Ativo/Inativo): ").strip().capitalize()
-                )
-                if novo_status in ["Ativo", "Inativo"]:
-                    updates["status_usuario"] = novo_status
-                else:
-                    print("Status inválido! Use 'Ativo' ou 'Inativo'")
-
-            elif opcao == "5":
-                atualizar_endereco(connection, row[0])
-
-        # Realizar atualização no banco de dados
-        if updates:
-            try:
-                condition = f"usuario_id = {row[0]}"
-                query = create_update_query("usuarios", updates.keys(), condition)
-                update_data(connection, query, tuple(updates.values()))
-                print("\nUsuário atualizado com sucesso!")
-
-                # Exibir dados atualizados
-                print("\n=== Dados Atualizados ===")
-                result = read_user(connection, usuario_id=row[0])
-                for updated_row in result:
-                    print(f"Nome: {updated_row[1]}")
-                    print(f"Email: {updated_row[2]}")
-                    print(
-                        f"Telefone: ({updated_row[3][:2]}) {updated_row[3][2:7]}-{updated_row[3][7:]}"
-                    )
-                    print(f"Status: {updated_row[5]}")
-
-            except Exception as e:
-                print(f"Erro ao atualizar usuário: {str(e)}")
-                return False
-
-    return True
+    return False
 
 
 def atualizar_endereco(connection, usuario_id):
