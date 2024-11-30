@@ -1,8 +1,11 @@
 from db_utils import create_read_query, read_data, update_data, create_update_query
 from db_utils import create_delete_query, delete_data
 
+
 # Função para ler dados do usuário pelo nome, ou pelo usuario_id, ou pelo email, ou pelo status, ou pelo telefone, todos padrao None
-def read_user(connection, nome=None, usuario_id=None, email=None, status=None, telefone=None):
+def read_user(
+    connection, nome=None, usuario_id=None, email=None, status=None, telefone=None
+):
     query = create_read_query("usuarios", ["*"])
     if nome:
         query += f" WHERE nome LIKE '{nome}'"
@@ -41,9 +44,10 @@ def print_user_address(connection, usuario_id=None):
         print(f"CEP: {cep[:2]}.{cep[2:5]}-{cep[5:]}")
 
 
-
 # Função imprimir dados completos do usuário com endereço correspondente usando a função read_user
-def print_user(connection, nome=None, usuario_id=None, email=None, status=None, telefone=None):
+def print_user(
+    connection, nome=None, usuario_id=None, email=None, status=None, telefone=None
+):
     result = read_user(connection, nome, usuario_id, email, status, telefone)
     for row in result:
         print(f"Usuário ID: {row[0]}")
@@ -56,11 +60,12 @@ def print_user(connection, nome=None, usuario_id=None, email=None, status=None, 
         print(*"*" * 50)
         print("\n")
 
-# Função atualizar dados do usuário usando função read_user para encontrar o usuário pelo nome, 
+
+# Função atualizar dados do usuário usando função read_user para encontrar o usuário pelo nome,
 # ou pelo usuario_id, ou pelo email, ou pelo status, ou pelo telefone, todos padrao None
 def update_user(connection, usuario_id=None, email=None):
     # Primeiro, verificar se o usuário existe
-    result = read_user(connection, usuario_id= usuario_id, email= email)
+    result = read_user(connection, usuario_id=usuario_id, email=email)
     if not result:
         print("Usuário não encontrado.")
         return False
@@ -106,24 +111,26 @@ def update_user(connection, usuario_id=None, email=None):
             if opcao == "1":
                 novo_nome = input("Novo nome: ").strip()
                 if novo_nome:
-                    updates['nome'] = novo_nome
+                    updates["nome"] = novo_nome
 
             elif opcao == "2":
                 novo_email = input("Novo email: ").strip()
                 if novo_email:
-                    updates['email'] = novo_email
+                    updates["email"] = novo_email
 
             elif opcao == "3":
                 novo_telefone = input("Novo telefone (apenas números): ").strip()
                 if novo_telefone.isdigit() and len(novo_telefone) == 11:
-                    updates['telefone'] = novo_telefone
+                    updates["telefone"] = novo_telefone
                 else:
                     print("Telefone inválido! Use apenas números (11 dígitos)")
 
             elif opcao == "4":
-                novo_status = input("Novo status (Ativo/Inativo): ").strip().capitalize()
-                if novo_status in ['Ativo', 'Inativo']:
-                    updates['status_usuario'] = novo_status
+                novo_status = (
+                    input("Novo status (Ativo/Inativo): ").strip().capitalize()
+                )
+                if novo_status in ["Ativo", "Inativo"]:
+                    updates["status_usuario"] = novo_status
                 else:
                     print("Status inválido! Use 'Ativo' ou 'Inativo'")
 
@@ -144,7 +151,9 @@ def update_user(connection, usuario_id=None, email=None):
                 for updated_row in result:
                     print(f"Nome: {updated_row[1]}")
                     print(f"Email: {updated_row[2]}")
-                    print(f"Telefone: ({updated_row[3][:2]}) {updated_row[3][2:7]}-{updated_row[3][7:]}")
+                    print(
+                        f"Telefone: ({updated_row[3][:2]}) {updated_row[3][2:7]}-{updated_row[3][7:]}"
+                    )
                     print(f"Status: {updated_row[5]}")
 
             except Exception as e:
@@ -152,6 +161,7 @@ def update_user(connection, usuario_id=None, email=None):
                 return False
 
     return True
+
 
 def atualizar_endereco(connection, usuario_id):
     """Função auxiliar para atualizar endereço"""
@@ -165,7 +175,7 @@ def atualizar_endereco(connection, usuario_id):
         "4": ("bairro", "Bairro"),
         "5": ("cidade", "Cidade"),
         "6": ("estado", "Estado (UF)"),
-        "7": ("cep", "CEP")
+        "7": ("cep", "CEP"),
     }
 
     for key, (_, label) in opcoes.items():
@@ -197,19 +207,20 @@ def atualizar_endereco(connection, usuario_id):
             except Exception as e:
                 print(f"Erro ao atualizar endereço: {str(e)}")
 
+
 def confirm_action(message):
     """Função auxiliar para confirmar ações"""
     while True:
         response = input(f"\n{message} (S/N): ").upper().strip()
-        if response in ['S', 'N']:
-            return response == 'S'
+        if response in ["S", "N"]:
+            return response == "S"
         print("Por favor, responda com S ou N.")
 
 
 # Função deletar usuário da tabela usuarios usando a função read_user para encontrar o usuário usuario_id ou email e se houver, deletar o usuário e o endereço correspondente
 def delete_user(connection, usuario_id=None, email=None):
     # Primeiro, verificar se o usuário existe
-    result = read_user(connection, usuario_id= usuario_id, email= email)
+    result = read_user(connection, usuario_id=usuario_id, email=email)
     if not result:
         print("Usuário não encontrado.")
         return False
@@ -231,13 +242,16 @@ def delete_user(connection, usuario_id=None, email=None):
         if not confirm_action("Deseja excluir o usuário?"):
             continue
 
+        # endereco_id antes de deletar o usuarioendereco
+        endereco_id = read_user_address(connection, row[0])[0][0]
+
         # Realizar exclusão no banco de dados
         try:
+            # Rollback any existing transaction - Garantir que não tem nenhuma transação pendente
+            connection.rollback()
+
             # Iniciar transação
             connection.start_transaction()
-
-            # endereco_id
-            condition_endereco = read_user_address(connection, row[0])[0][0]
 
             # Deletar o row na tabela usuarioendereco
             condition_usuarioendereco = f"usuario_id = {row[0]}"
@@ -245,10 +259,11 @@ def delete_user(connection, usuario_id=None, email=None):
             delete_data(connection, query, None)
 
             # Deletar o row na tabela endereco
+            condition_endereco = f"endereco_id = {endereco_id}"
             query = create_delete_query("endereco", condition_endereco)
             delete_data(connection, query, None)
 
-            # Deletar o row na tabela usuarios  
+            # Deletar o row na tabela usuarios
             condition = f"usuario_id = {row[0]}"
             query = create_delete_query("usuarios", condition)
             delete_data(connection, query, None)
@@ -263,6 +278,5 @@ def delete_user(connection, usuario_id=None, email=None):
             print(f"Erro ao excluir usuário: {str(e)}")
             print("Todas as alterações foram revertidas.")
             return False
-
 
     return True

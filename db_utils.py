@@ -70,10 +70,9 @@ def delete_data(connection, query, values):
         print("Dados deletados com sucesso")
     except Error as e:
         print(f"Erro ao deletar dados no MySQL: {e}")
-        raise e  # Propaga o erro para ser tratado pela transação principal
+        raise e
     finally:
         cursor.close()
-
 
 # Função para criar query de inserção de dados
 def create_insert_query(table, columns):

@@ -18,7 +18,7 @@ def main():
             # print_user(connection, nome="Karlos")
             # update_user(connection, email="updated@gmail.com")
             # delete_user(connection, email="updated@gmail.com")
-            delete_user(connection, usuario_id=6)
+            delete_user(connection, usuario_id=9)
 
         finally:
             if connection.is_connected():
