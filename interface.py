@@ -10,6 +10,7 @@ from read_update_delete_user import (
 from create_user import create_insert_query, insert_data, get_usuario_id_endereco_id
 from validate_utils import validate_email, validate_phone, validate_cep, validate_uf
 import datetime
+from interface_author import AuthorManagementInterface
 
 
 class UserManagementInterface:
@@ -17,9 +18,7 @@ class UserManagementInterface:
         self.connection = connection
         self.root = tk.Tk()
         self.root.title("Gerenciamento de Usuários")
-        self.root.geometry("800x600")  # Aumentando a largura para acomodar a disposição
-        self.user_frame = None
-        self.address_frame = None
+        self.root.geometry("800x600")
 
         # Configurando estilo
         self.configure_style()
@@ -27,6 +26,12 @@ class UserManagementInterface:
         # Criando frame principal
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(expand=True, fill="both")
+        print(f"Main frame criado: {self.main_frame}")  # Debug
+
+        # Inicializar interface de autores
+        self.author_interface = AuthorManagementInterface(self.connection)
+        self.author_interface.set_main_frame(self.main_frame)
+        print("Interface de autores inicializada")  # Debug
 
         # Criando os botões inicialmente
         self.create_buttons()
@@ -154,24 +159,43 @@ class UserManagementInterface:
         self.state_entry.grid(row=6, column=1, sticky="w", pady=2)
 
     def create_buttons(self):
-        """Cria os botões da interface"""
-        buttons_frame = tk.Frame(self.main_frame)
-        buttons_frame.grid(
-            row=0, column=0, rowspan=2, sticky="ns", padx=10, pady=5
-        )  # Colocando à esquerda
+        """Cria o menu da interface"""
+        # Criar menu principal
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
 
-        buttons = [
+        # Criar submenu Usuário
+        user_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Usuário", menu=user_menu)
+
+        # Adicionar opções ao submenu
+        menu_options = [
             ("Criar Usuário", self.create_user_interface),
             ("Atualizar Usuário", self.update_user_interface),
             ("Deletar Usuário", self.delete_user_interface),
             ("Buscar Usuário", self.print_user_interface),
         ]
 
-        for text, command in buttons:
-            btn = tk.Button(
-                buttons_frame, text=text, command=command, **self.button_style
-            )
-            btn.pack(pady=5)
+        for text, command in menu_options:
+            user_menu.add_command(label=text, command=command)
+
+        # Cria submenu de Autor
+        author_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Autor", menu=author_menu)
+
+        # Criar instância da interface de autores
+        self.author_interface = AuthorManagementInterface(self.connection)
+        self.author_interface.set_main_frame(self.main_frame)
+
+        # Adicionar opções ao submenu Autor
+        author_menu_options = [
+            ("Criar Autor", self.author_interface.create_author_interface),
+            ("Atualizar Autor", self.author_interface.update_author_interface),
+            ("Buscar Autor", self.author_interface.print_author_interface),
+        ]
+
+        for text, command in author_menu_options:
+            author_menu.add_command(label=text, command=command)
 
     def validate_user_data(self):
         """Valida os dados do usuário"""
