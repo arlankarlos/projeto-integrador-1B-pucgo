@@ -11,6 +11,8 @@ from create_user import create_insert_query, insert_data, get_usuario_id_enderec
 from validate_utils import validate_email, validate_phone, validate_cep, validate_uf
 import datetime
 from interface_author import AuthorManagementInterface
+from interface_categories import CategoriesManagementInterface
+from interface_books import BooksManagementInterface
 
 
 class UserManagementInterface:
@@ -196,6 +198,46 @@ class UserManagementInterface:
 
         for text, command in author_menu_options:
             author_menu.add_command(label=text, command=command)
+
+        # Cria instância da interface de categorias
+        self.categories_interface = CategoriesManagementInterface(self.connection)
+        self.categories_interface.set_main_frame(self.main_frame)
+
+        # Cria submenu de Categorias
+        categories_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Categorias", menu=categories_menu)
+
+        # Adiciona opções ao submenu Categorias
+        categories_menu_options = [
+            ("Criar Categoria", self.categories_interface.create_category_interface),
+            (
+                "Atualizar Categoria",
+                self.categories_interface.update_category_interface,
+            ),
+            ("Buscar Categoria", self.categories_interface.print_category_interface),
+        ]
+
+        for text, command in categories_menu_options:
+            categories_menu.add_command(label=text, command=command)
+
+        # Cria instância da interface de livros
+        self.books_interface = BooksManagementInterface(self.connection)
+        self.books_interface.set_main_frame(self.main_frame)
+
+        # Cria submenu de Livros
+        books_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Livros", menu=books_menu)
+
+        # Adiciona opções ao submenu Livros
+        books_menu_options = [
+            ("Criar Livro", self.books_interface.create_book_interface),
+            # ("Atualizar Livro", self.books_interface.update_book_interface),
+            # ("Deletar Livro", self.books_interface.delete_book_interface),
+            # ("Buscar Livro", self.books_interface.print_book_interface),
+        ]
+
+        for text, command in books_menu_options:
+            books_menu.add_command(label=text, command=command)
 
     def validate_user_data(self):
         """Valida os dados do usuário"""
