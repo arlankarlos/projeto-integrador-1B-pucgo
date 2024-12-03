@@ -32,10 +32,6 @@ def read_user_full_address():
 
 # Função ler usuario_id da tabela usuarios e endereço_id da tabela endereco
 def get_usuario_id_endereco_id(connection):
-    #Retrieves the latest user ID and address ID from the "usuarios" and "endereco" tables,
-    # respectively, and returns them as a tuple.
-    #This function is used to get the IDs needed to create a new user-address
-    # relationship in the "usuarioendereco" table.
 
     query = create_read_query("usuarios", ["usuario_id"])
     result = read_data(connection, query)

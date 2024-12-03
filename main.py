@@ -1,5 +1,5 @@
 from db_utils import get_database_connection
-from interface2 import create_interface
+from interface import create_interface
 
 
 def main():

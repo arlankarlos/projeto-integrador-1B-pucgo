@@ -1,5 +1,7 @@
 from db_utils import create_read_query, read_data, update_data, create_update_query
 from db_utils import create_delete_query, delete_data
+from tkinter import messagebox
+import datetime
 
 
 # Função para ler dados do usuário pelo nome, ou pelo usuario_id, ou pelo email, ou pelo status, ou pelo telefone, todos padrao None
@@ -27,6 +29,7 @@ def read_user_address(connection, usuario_id=None):
     if usuario_id:
         query += f" WHERE endereco_id IN (SELECT endereco_id FROM usuarioendereco WHERE usuario_id = '{usuario_id}')"
     result = read_data(connection, query)
+
     return result
 
 
@@ -168,6 +171,7 @@ def print_user(
 
 #     return True
 
+
 def update_user(connection, usuario_id=None, email=None, updates=None):
     """
     Atualiza os dados do usuário
@@ -223,7 +227,19 @@ def atualizar_endereco(connection, usuario_id):
         campo, label = opcoes[opcao]
         novo_valor = input(f"Novo {label}: ").strip()
 
-        if novo_valor:
+        if campo == "numero":
+            # Tratamento especial para o campo número
+            if not novo_valor:  # Se estiver vazio
+                novo_valor = None
+            else:
+                # Tenta converter para número, se falhar usa 0
+                try:
+                    novo_valor = int(novo_valor)
+                except ValueError:
+                    messagebox.showwarning("Aviso", "Valor inválido para número. Será usado 0.")
+                    novo_valor = 0
+
+        if novo_valor is not None:  # Permite valor None para número
             try:
                 # Primeiro, obtemos o endereco_id
                 query = f"""
@@ -237,11 +253,12 @@ def atualizar_endereco(connection, usuario_id):
                     condition = f"endereco_id = {endereco_id}"
                     query = create_update_query("endereco", [campo], condition)
                     update_data(connection, query, (novo_valor,))
-                    print(f"{label} atualizado com sucesso!")
+                    messagebox.showinfo("Sucesso", f"{label} atualizado com sucesso!")
                 else:
-                    print("Endereço não encontrado para este usuário.")
+                    messagebox.showerror("Erro", "Endereço não encontrado para este usuário.")
             except Exception as e:
-                print(f"Erro ao atualizar endereço: {str(e)}")
+                messagebox.showerror("Erro", f"Erro ao atualizar endereço: {str(e)}")
+                print(f"[{datetime.datetime.now()}] Erro ao atualizar endereço: {str(e)}")
 
 
 def confirm_action(message):
