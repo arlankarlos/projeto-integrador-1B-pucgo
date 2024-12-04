@@ -6,6 +6,7 @@ from read_update_delete_user import (
     delete_data,
     read_user,
     read_user_address,
+    read_data,
 )
 from create_user import create_insert_query, insert_data, get_usuario_id_endereco_id
 from validate_utils import validate_email, validate_phone, validate_cep, validate_uf
@@ -842,142 +843,174 @@ class UserManagementInterface:
                 self.connection.close()
 
     def print_user_interface(self):
-        """Interface para buscar e exibir dados do usuário"""
+        """Interface para exibir todos os usuários cadastrados"""
         self.clear_right_frames()
 
-        # Criar frame de busca
-        search_frame = tk.LabelFrame(
-            self.main_frame, text="Buscar Usuário", padx=10, pady=5
+        # Frame principal
+        main_display_frame = tk.LabelFrame(
+            self.main_frame, text="Usuários Cadastrados", padx=10, pady=5
         )
-        search_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+        main_display_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
 
-        # Campos de busca
-        tk.Label(search_frame, text="ID do Usuário:").grid(
-            row=0, column=0, sticky="e", pady=2
+        # Criar Treeview
+        columns = ("ID", "Nome", "Email", "Telefone", "Data Cadastro", "Status")
+        self.users_tree = ttk.Treeview(
+            main_display_frame,
+            columns=columns,
+            show="headings",
+            selectmode="browse"
         )
-        self.id_entry = tk.Entry(search_frame)
-        self.id_entry.grid(row=0, column=1, sticky="w", pady=2)
 
-        tk.Label(search_frame, text="Email:").grid(row=1, column=0, sticky="e", pady=2)
-        self.email_entry = tk.Entry(search_frame)
-        self.email_entry.grid(row=1, column=1, sticky="w", pady=2)
+        # Configurar cabeçalhos
+        for col in columns:
+            self.users_tree.heading(col, text=col)
+            # Ajustar largura das colunas
+            if col == "Nome" or col == "Email":
+                self.users_tree.column(col, width=200)
+            elif col == "Data Cadastro":
+                self.users_tree.column(col, width=150)
+            else:
+                self.users_tree.column(col, width=100)
 
-        def perform_search():
-            usuario_id = self.id_entry.get().strip()
-            email = self.email_entry.get().strip()
+        # Adicionar scrollbar
+        scrollbar = ttk.Scrollbar(
+            main_display_frame, orient="vertical", command=self.users_tree.yview
+        )
+        self.users_tree.configure(yscrollcommand=scrollbar.set)
 
-            if not usuario_id and not email:
-                messagebox.showwarning(
-                    "Aviso", "Por favor, informe ID ou Email para busca!"
-                )
+        # Posicionar elementos
+        self.users_tree.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Frame para botões
+        button_frame = ttk.Frame(main_display_frame)
+        button_frame.grid(row=1, column=0, columnspan=2, pady=10)
+
+        # Botão para atualizar lista
+        ttk.Button(
+            button_frame,
+            text="Atualizar Lista",
+            command=self.load_users
+        ).grid(row=0, column=0, padx=5)
+
+        # Botão para ver detalhes
+        ttk.Button(
+            button_frame,
+            text="Ver Detalhes",
+            command=self.show_user_details
+        ).grid(row=0, column=1, padx=5)
+
+        # Configurar expansão do grid
+        main_display_frame.grid_columnconfigure(0, weight=1)
+        main_display_frame.grid_rowconfigure(0, weight=1)
+
+        # Carregar usuários
+        self.load_users()
+
+    def load_users(self):
+        """Carrega todos os usuários na tabela"""
+        try:
+            # Limpar tabela
+            for item in self.users_tree.get_children():
+                self.users_tree.delete(item)
+
+            if not self.ensure_connection():
                 return
 
-            try:
-                if not self.connection or not self.connection.is_connected():
-                    self.connection = get_database_connection()
-                    if not self.connection:
-                        messagebox.showerror(
-                            "Erro", "Não foi possível conectar ao banco de dados!"
-                        )
-                        return
+            # Buscar todos os usuários
+            query = "SELECT * FROM usuarios ORDER BY usuario_id"
+            result = read_data(self.connection, query)
 
-                # Buscar dados do usuário
-                result = read_user(
-                    self.connection,
-                    usuario_id=(
-                        usuario_id if usuario_id else None
-                    ),  # Removida a conversão para int
-                    email=email if email else None,
-                )
+            if result:
+                for row in result:
+                    # Formatar telefone
+                    telefone = str(row[3]) # type: ignore
+                    telefone_formatado = f"({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}"
 
-                if not result or len(result) == 0:  # Verificação adicional
-                    messagebox.showinfo("Aviso", "Usuário não encontrado!")
-                    return
+                    # Formatar data
+                    data = row[4].strftime("%d/%m/%Y %H:%M:%S") if row[4] else ""  # type: ignore
 
-                # Limpar frame atual
-                self.clear_right_frames()
+                    # Inserir na tabela
+                    self.users_tree.insert("", "end", values=(
+                        row[0],  # ID  # type: ignore
+                        row[1],  # Nome # type: ignore
+                        row[2],  # Email # type: ignore
+                        telefone_formatado,  # Telefone formatado
+                        data,    # Data formatada
+                        row[5]   # Status # type: ignore
+                    ))
 
-                # Criar novo frame para exibir resultados
-                result_frame = tk.LabelFrame(
-                    self.main_frame, text="Dados do Usuário", padx=10, pady=5
-                )
-                result_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao carregar usuários: {str(e)}")
+            print(f"[{datetime.datetime.now()}] Erro ao carregar usuários: {str(e)}")
 
-                # Exibir dados do usuário
-                row = result[0]  # Primeiro resultado
-                labels = [
-                    ("ID", str(row[0])),  # Convertendo para string
-                    ("Nome", str(row[1])),
-                    ("Email", str(row[2])),
-                    (
-                        "Telefone",
-                        f"({str(row[3])[:2]}) {str(row[3])[2:7]}-{str(row[3])[7:]}",
-                    ),
-                    ("Data de Cadastro", str(row[4])),
-                    ("Status", str(row[5])),
+    def show_user_details(self):
+        """Mostra os detalhes do usuário selecionado"""
+        selected_item = self.users_tree.selection()
+        if not selected_item:
+            messagebox.showwarning("Aviso", "Por favor, selecione um usuário para ver os detalhes.")
+            return
+
+        usuario_id = self.users_tree.item(selected_item)['values'][0]  # type: ignore
+
+        try:
+            if not self.ensure_connection():
+                return
+
+            # Buscar dados do usuário
+            result = read_user(self.connection, usuario_id=str(usuario_id))
+
+            if not result:
+                messagebox.showinfo("Aviso", "Usuário não encontrado!")
+                return
+
+            # Criar janela de detalhes
+            details_window = tk.Toplevel(self.root)
+            details_window.title(f"Detalhes do Usuário - ID: {usuario_id}")
+            details_window.geometry("500x400")
+
+            # Frame para dados do usuário
+            user_frame = ttk.LabelFrame(details_window, text="Dados do Usuário", padding=10)
+            user_frame.pack(fill="x", padx=10, pady=5)
+
+            row = result[0]
+            user_labels = [
+                ("ID", str(row[0])),
+                ("Nome", str(row[1])),
+                ("Email", str(row[2])),
+                ("Telefone", f"({str(row[3])[:2]}) {str(row[3])[2:7]}-{str(row[3])[7:]}"),
+                ("Data de Cadastro", row[4].strftime("%d/%m/%Y %H:%M:%S") if row[4] else ""),
+                ("Status", str(row[5]))
+            ]
+
+            for i, (label, value) in enumerate(user_labels):
+                ttk.Label(user_frame, text=f"{label}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
+                ttk.Label(user_frame, text=value).grid(row=i, column=1, sticky="w", padx=5, pady=2)
+
+            # Buscar e exibir endereço
+            address_result = read_user_address(self.connection, usuario_id=str(usuario_id))
+            if address_result:
+                address_frame = ttk.LabelFrame(details_window, text="Endereço", padding=10)
+                address_frame.pack(fill="x", padx=10, pady=5)
+
+                addr = address_result[0]
+                address_labels = [
+                    ("Logradouro", str(addr[1])),
+                    ("Número", str(addr[2])),
+                    ("Complemento", str(addr[3])),
+                    ("Bairro", str(addr[4])),
+                    ("Cidade", str(addr[5])),
+                    ("Estado", str(addr[6])),
+                    ("CEP", f"{str(addr[7])[:5]}-{str(addr[7])[5:]}")
                 ]
 
-                for i, (label, value) in enumerate(labels):
-                    tk.Label(result_frame, text=f"{label}:").grid(
-                        row=i, column=0, sticky="e", pady=2
-                    )
-                    tk.Label(result_frame, text=value).grid(
-                        row=i, column=1, sticky="w", pady=2
-                    )
+                for i, (label, value) in enumerate(address_labels):
+                    ttk.Label(address_frame, text=f"{label}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
+                    ttk.Label(address_frame, text=value).grid(row=i, column=1, sticky="w", padx=5, pady=2)
 
-                # Buscar e exibir dados do endereço
-                try:
-                    address_result = read_user_address(
-                        self.connection, usuario_id=str(row[0])
-                    )  # Convertendo para string
-                    if address_result and len(address_result) > 0:
-                        address_row = address_result[0]
-                        address_frame = tk.LabelFrame(
-                            self.main_frame, text="Endereço", padx=10, pady=5
-                        )
-                        address_frame.grid(
-                            row=1, column=1, sticky="nsew", padx=10, pady=5
-                        )
-
-                        address_labels = [
-                            ("Logradouro", str(address_row[1])),
-                            ("Número", str(address_row[2])),
-                            ("Complemento", str(address_row[3])),
-                            ("Bairro", str(address_row[4])),
-                            ("Cidade", str(address_row[5])),
-                            ("Estado", str(address_row[6])),
-                            (
-                                "CEP",
-                                f"{str(address_row[7])[:5]}-{str(address_row[7])[5:]}",
-                            ),
-                        ]
-
-                        for i, (label, value) in enumerate(address_labels):
-                            tk.Label(address_frame, text=f"{label}:").grid(
-                                row=i, column=0, sticky="e", pady=2
-                            )
-                            tk.Label(address_frame, text=value).grid(
-                                row=i, column=1, sticky="w", pady=2
-                            )
-                    else:
-                        messagebox.showinfo(
-                            "Aviso", "Endereço não encontrado para este usuário!"
-                        )
-                except Exception as e:
-                    print(
-                        f"[{datetime.datetime.now()}] Erro ao buscar endereço: {str(e)}"
-                    )
-                    messagebox.showinfo("Aviso", "Erro ao buscar endereço do usuário!")
-
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao buscar usuário: {str(e)}")
-                print(f"[{datetime.datetime.now()}] Erro ao buscar usuário: {str(e)}")
-
-        # Botão de busca
-        search_button = tk.Button(
-            search_frame, text="Buscar", command=perform_search, **self.button_style
-        )
-        search_button.grid(row=2, column=0, columnspan=2, pady=10)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao carregar detalhes: {str(e)}")
+            print(f"[{datetime.datetime.now()}] Erro ao carregar detalhes do usuário {usuario_id}: {str(e)}")
 
     def clear_fields(self):
         """Limpa os campos de entrada se eles existirem"""
