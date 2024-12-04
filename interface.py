@@ -34,6 +34,9 @@ class UserManagementInterface:
         # Criando os botões inicialmente
         self.create_buttons()
 
+        # Exibir a interface inicial
+        self.home_interface()         
+
     def ensure_connection(self):
         """
         Verifica se a conexão está ativa e tenta reconectar se necessário
@@ -57,6 +60,46 @@ class UserManagementInterface:
             "relief": tk.RAISED,
             "cursor": "hand2",
         }
+
+    def home_interface(self):
+        """Interface inicial do sistema"""
+        self.clear_right_frames()
+
+        # Criar frame principal para a home
+        home_frame = tk.Frame(
+            self.main_frame,
+            bg="#2c3e50"  # Cor de fundo escura para contraste
+        )
+        home_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+
+        # Configurar o grid para centralizar o conteúdo
+        home_frame.grid_columnconfigure(0, weight=1)
+        home_frame.grid_rowconfigure(0, weight=1)
+
+        # Criar label com o título
+        title_label = tk.Label(
+            home_frame,
+            text="Gestão de Biblioteca",
+            font=("Helvetica", 36, "bold"),
+            fg="white",
+            bg="#2c3e50",
+            pady=20
+        )
+        title_label.grid(row=0, column=0, sticky="n", pady=50)
+
+        # Adicionar subtítulo ou descrição (opcional)
+        subtitle_label = tk.Label(
+            home_frame,
+            text="Sistema de Gerenciamento Bibliotecário",
+            font=("Helvetica", 16),
+            fg="white",
+            bg="#2c3e50"
+        )
+        subtitle_label.grid(row=1, column=0, sticky="n")
+
+        # Configurar o frame principal para expandir
+        self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_rowconfigure(0, weight=1)
 
     def create_user_fields(self):
         """Cria os campos de dados do usuário"""
@@ -164,6 +207,30 @@ class UserManagementInterface:
 
         # Criar submenu Usuário
         user_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Home", command=self.home_interface) # Adiciona a home
+
+        # Cria instância da interface de emprestimos
+        self.books_interface = BorrowManagementInterface(self.connection)
+        self.books_interface.set_main_frame(self.main_frame)
+
+        # Cria submenu de Empréstimos
+        borrow_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Empréstimos", menu=borrow_menu)
+
+        # Adiciona opções ao submenu Empréstimos
+        borrow_menu_options = [
+            ("Realizar Empréstimo", self.books_interface.borrow_interface),
+            ("Devolver Livro", self.books_interface.return_interface),
+            ("Buscar Empréstimos", self.books_interface.print_borrow_interface),
+            ("Multas", self.books_interface.fine_interface),
+            ("Reservas", self.books_interface.reserve_interface),
+        ]
+
+        for text, command in borrow_menu_options:
+            borrow_menu.add_command(label=text, command=command)
+
+        # Criar submenu Usuário
+        user_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Usuário", menu=user_menu)
 
         # Adicionar opções ao submenu
@@ -235,25 +302,7 @@ class UserManagementInterface:
         for text, command in books_menu_options:
             books_menu.add_command(label=text, command=command)
 
-        # Cria instância da interface de emprestimos
-        self.books_interface = BorrowManagementInterface(self.connection)
-        self.books_interface.set_main_frame(self.main_frame)
 
-        # Cria submenu de Empréstimos
-        borrow_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Empréstimos", menu=borrow_menu)
-
-        # Adiciona opções ao submenu Empréstimos
-        borrow_menu_options = [
-            ("Realizar Empréstimo", self.books_interface.borrow_interface),
-            ("Devolver Livro", self.books_interface.return_interface),
-            ("Buscar Empréstimos", self.books_interface.print_borrow_interface),
-            ("Multas", self.books_interface.fine_interface),
-            ("Reservas", self.books_interface.reserve_interface),
-        ]
-
-        for text, command in borrow_menu_options:
-            borrow_menu.add_command(label=text, command=command)
 
     def validate_user_data(self):
         """Valida os dados do usuário"""
@@ -855,10 +904,7 @@ class UserManagementInterface:
         # Criar Treeview
         columns = ("ID", "Nome", "Email", "Telefone", "Data Cadastro", "Status")
         self.users_tree = ttk.Treeview(
-            main_display_frame,
-            columns=columns,
-            show="headings",
-            selectmode="browse"
+            main_display_frame, columns=columns, show="headings", selectmode="browse"
         )
 
         # Configurar cabeçalhos
@@ -887,17 +933,13 @@ class UserManagementInterface:
         button_frame.grid(row=1, column=0, columnspan=2, pady=10)
 
         # Botão para atualizar lista
-        ttk.Button(
-            button_frame,
-            text="Atualizar Lista",
-            command=self.load_users
-        ).grid(row=0, column=0, padx=5)
+        ttk.Button(button_frame, text="Atualizar Lista", command=self.load_users).grid(
+            row=0, column=0, padx=5
+        )
 
         # Botão para ver detalhes
         ttk.Button(
-            button_frame,
-            text="Ver Detalhes",
-            command=self.show_user_details
+            button_frame, text="Ver Detalhes", command=self.show_user_details
         ).grid(row=0, column=1, padx=5)
 
         # Configurar expansão do grid
@@ -924,21 +966,27 @@ class UserManagementInterface:
             if result:
                 for row in result:
                     # Formatar telefone
-                    telefone = str(row[3]) # type: ignore
-                    telefone_formatado = f"({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}"
+                    telefone = str(row[3])  # type: ignore
+                    telefone_formatado = (
+                        f"({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}"
+                    )
 
                     # Formatar data
                     data = row[4].strftime("%d/%m/%Y %H:%M:%S") if row[4] else ""  # type: ignore
 
                     # Inserir na tabela
-                    self.users_tree.insert("", "end", values=(
-                        row[0],  # ID  # type: ignore
-                        row[1],  # Nome # type: ignore
-                        row[2],  # Email # type: ignore
-                        telefone_formatado,  # Telefone formatado
-                        data,    # Data formatada
-                        row[5]   # Status # type: ignore
-                    ))
+                    self.users_tree.insert(
+                        "",
+                        "end",
+                        values=(
+                            row[0],  # ID  # type: ignore
+                            row[1],  # Nome # type: ignore
+                            row[2],  # Email # type: ignore
+                            telefone_formatado,  # Telefone formatado
+                            data,  # Data formatada
+                            row[5],  # Status # type: ignore
+                        ),
+                    )
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao carregar usuários: {str(e)}")
@@ -948,10 +996,12 @@ class UserManagementInterface:
         """Mostra os detalhes do usuário selecionado"""
         selected_item = self.users_tree.selection()
         if not selected_item:
-            messagebox.showwarning("Aviso", "Por favor, selecione um usuário para ver os detalhes.")
+            messagebox.showwarning(
+                "Aviso", "Por favor, selecione um usuário para ver os detalhes."
+            )
             return
 
-        usuario_id = self.users_tree.item(selected_item)['values'][0]  # type: ignore
+        usuario_id = self.users_tree.item(selected_item)["values"][0]  # type: ignore
 
         try:
             if not self.ensure_connection():
@@ -970,7 +1020,9 @@ class UserManagementInterface:
             details_window.geometry("500x400")
 
             # Frame para dados do usuário
-            user_frame = ttk.LabelFrame(details_window, text="Dados do Usuário", padding=10)
+            user_frame = ttk.LabelFrame(
+                details_window, text="Dados do Usuário", padding=10
+            )
             user_frame.pack(fill="x", padx=10, pady=5)
 
             row = result[0]
@@ -978,19 +1030,33 @@ class UserManagementInterface:
                 ("ID", str(row[0])),
                 ("Nome", str(row[1])),
                 ("Email", str(row[2])),
-                ("Telefone", f"({str(row[3])[:2]}) {str(row[3])[2:7]}-{str(row[3])[7:]}"),
-                ("Data de Cadastro", row[4].strftime("%d/%m/%Y %H:%M:%S") if row[4] else ""),
-                ("Status", str(row[5]))
+                (
+                    "Telefone",
+                    f"({str(row[3])[:2]}) {str(row[3])[2:7]}-{str(row[3])[7:]}",
+                ),
+                (
+                    "Data de Cadastro",
+                    row[4].strftime("%d/%m/%Y %H:%M:%S") if row[4] else "",
+                ),
+                ("Status", str(row[5])),
             ]
 
             for i, (label, value) in enumerate(user_labels):
-                ttk.Label(user_frame, text=f"{label}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
-                ttk.Label(user_frame, text=value).grid(row=i, column=1, sticky="w", padx=5, pady=2)
+                ttk.Label(user_frame, text=f"{label}:").grid(
+                    row=i, column=0, sticky="e", padx=5, pady=2
+                )
+                ttk.Label(user_frame, text=value).grid(
+                    row=i, column=1, sticky="w", padx=5, pady=2
+                )
 
             # Buscar e exibir endereço
-            address_result = read_user_address(self.connection, usuario_id=str(usuario_id))
+            address_result = read_user_address(
+                self.connection, usuario_id=str(usuario_id)
+            )
             if address_result:
-                address_frame = ttk.LabelFrame(details_window, text="Endereço", padding=10)
+                address_frame = ttk.LabelFrame(
+                    details_window, text="Endereço", padding=10
+                )
                 address_frame.pack(fill="x", padx=10, pady=5)
 
                 addr = address_result[0]
@@ -1001,16 +1067,22 @@ class UserManagementInterface:
                     ("Bairro", str(addr[4])),
                     ("Cidade", str(addr[5])),
                     ("Estado", str(addr[6])),
-                    ("CEP", f"{str(addr[7])[:5]}-{str(addr[7])[5:]}")
+                    ("CEP", f"{str(addr[7])[:5]}-{str(addr[7])[5:]}"),
                 ]
 
                 for i, (label, value) in enumerate(address_labels):
-                    ttk.Label(address_frame, text=f"{label}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
-                    ttk.Label(address_frame, text=value).grid(row=i, column=1, sticky="w", padx=5, pady=2)
+                    ttk.Label(address_frame, text=f"{label}:").grid(
+                        row=i, column=0, sticky="e", padx=5, pady=2
+                    )
+                    ttk.Label(address_frame, text=value).grid(
+                        row=i, column=1, sticky="w", padx=5, pady=2
+                    )
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao carregar detalhes: {str(e)}")
-            print(f"[{datetime.datetime.now()}] Erro ao carregar detalhes do usuário {usuario_id}: {str(e)}")
+            print(
+                f"[{datetime.datetime.now()}] Erro ao carregar detalhes do usuário {usuario_id}: {str(e)}"
+            )
 
     def clear_fields(self):
         """Limpa os campos de entrada se eles existirem"""
