@@ -76,7 +76,7 @@ O programa é um sistema de gerenciamento de biblioteca que permite a administra
 - **interface_borrow.py**: Contém a classe `BorrowManagementInterface` que gerencia a interface gráfica e as funcionalidades relacionadas aos empréstimos e reservas.
 - **create_user.py**: Contém funções auxiliares para criar usuários no banco de dados.
 - **read_update_delete_user.py**: Contém funções auxiliares para ler, atualizar e deletar usuários no banco de dados.
-- **add_to_inventory.py**: Contém funções auxiliares para adicionar livros, autores e categorias ao banco de dados. Estrutura deixada de lado após realização da parte grafica com tkinter.
+- **add_to_inventory.py**: Contém funções auxiliares para adicionar livros, autores e categorias ao banco de dados. Estrutura inutilizada após realização da aplicação gráfica com tkinter.
 - **db_utils.py**: Contém funções utilitárias para interagir com o banco de dados.
 - **validate_utils.py**: Contém funções para validar dados de entrada, como email, telefone, CEP, etc.
 

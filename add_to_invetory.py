@@ -1,5 +1,4 @@
 from db_utils import create_insert_query, insert_data, create_read_query, read_data
-from validate_utils import validate_email, validate_phone, validate_cep, validate_uf
 from validate_utils import (
     validate_isbn,
     validate_year,
@@ -117,8 +116,8 @@ def add_book(connection):
     # Obtem o livro_id do livro adicionado
     query = create_read_query("livros", ["livro_id"])
     result = read_data(connection, query)
-    result.sort()
-    livro_id = result[-1][0]
+    result.sort() # type: ignore
+    livro_id = result[-1][0] # type: ignore
 
     # Preenche a tabela livroscategorias com o livro_id e a categoria_id
     query = create_insert_query("livroscategorias", ["livro_id", "categoria_id"])
