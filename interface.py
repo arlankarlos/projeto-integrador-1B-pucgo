@@ -13,6 +13,7 @@ import datetime
 from interface_author import AuthorManagementInterface
 from interface_categories import CategoriesManagementInterface
 from interface_books import BooksManagementInterface
+from interface_borrow import BorrowManagementInterface
 
 
 class UserManagementInterface:
@@ -28,12 +29,6 @@ class UserManagementInterface:
         # Criando frame principal
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(expand=True, fill="both")
-        print(f"Main frame criado: {self.main_frame}")  # Debug
-
-        # Inicializar interface de autores
-        self.author_interface = AuthorManagementInterface(self.connection)
-        self.author_interface.set_main_frame(self.main_frame)
-        print("Interface de autores inicializada")  # Debug
 
         # Criando os botões inicialmente
         self.create_buttons()
@@ -238,6 +233,26 @@ class UserManagementInterface:
 
         for text, command in books_menu_options:
             books_menu.add_command(label=text, command=command)
+
+        # Cria instância da interface de emprestimos
+        self.books_interface = BorrowManagementInterface(self.connection)
+        self.books_interface.set_main_frame(self.main_frame)
+
+        # Cria submenu de Empréstimos
+        borrow_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Empréstimos", menu=borrow_menu)
+
+        # Adiciona opções ao submenu Empréstimos
+        borrow_menu_options = [
+            ("Realizar Empréstimo", self.books_interface.borrow_interface),
+            ("Devolver Livro", self.books_interface.return_interface),
+            ("Buscar Empréstimos", self.books_interface.print_borrow_interface),
+            ("Multas", self.books_interface.fine_interface),
+            ("Reservas", self.books_interface.reserve_interface),
+        ]
+
+        for text, command in borrow_menu_options:
+            borrow_menu.add_command(label=text, command=command)
 
     def validate_user_data(self):
         """Valida os dados do usuário"""
