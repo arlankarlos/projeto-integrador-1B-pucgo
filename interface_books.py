@@ -1,5 +1,6 @@
+import csv
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from db_utils import (
     get_database_connection,
     read_data,
@@ -622,6 +623,391 @@ class BooksManagementInterface:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro na validação: {str(e)}")
             return False
+
+    def delete_book_interface(self):
+        """Cria a interface para deletar um livro existente"""
+        try:
+            self.clear_right_frames()
+
+            # Frame principal para deleção
+            self.delete_frame = tk.LabelFrame(
+                self.main_frame, text="Deletar Livro", padx=10, pady=5
+            )
+            self.delete_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+
+            # Frame para busca do livro
+            search_frame = tk.LabelFrame(
+                self.delete_frame, text="Buscar Livro", padx=10, pady=5
+            )
+            search_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=5)
+
+            # Opções de busca
+            self.search_type = tk.StringVar(value="titulo")
+            search_options = [
+                ("Título", "titulo"),
+                ("ISBN", "isbn"),
+                ("ID", "livro_id")
+            ]
+
+            for i, (text, value) in enumerate(search_options):
+                tk.Radiobutton(
+                    search_frame,
+                    text=text,
+                    variable=self.search_type,
+                    value=value
+                ).grid(row=0, column=i, padx=5)
+
+            # Campo de busca
+            self.search_entry = tk.Entry(search_frame, width=40)
+            self.search_entry.grid(row=1, column=0, columnspan=2, pady=5)
+
+            # Botão de busca
+            tk.Button(
+                search_frame,
+                text="Buscar",
+                command=self.search_book_for_deletion,
+                **self.button_style
+            ).grid(row=1, column=2, padx=5)
+
+            # Frame para exibir informações do livro (inicialmente vazio)
+            self.book_info_frame = tk.LabelFrame(
+                self.delete_frame, text="Informações do Livro", padx=10, pady=5
+            )
+            self.book_info_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=5)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar interface de deleção: {str(e)}")
+
+    def search_book_for_deletion(self):
+        """Busca um livro para deleção e exibe suas informações"""
+        try:
+            search_value = self.search_entry.get().strip()
+            search_type = self.search_type.get()
+
+            if not search_value:
+                messagebox.showwarning("Aviso", "Digite um valor para busca!")
+                return
+
+            # Construir query de busca
+            query = """
+                SELECT 
+                    l.livro_id, 
+                    l.titulo, 
+                    l.isbn, 
+                    l.ano_publicacao, 
+                    l.editora, 
+                    l.quantidade_copias, 
+                    l.localizacao_estante,
+                    GROUP_CONCAT(DISTINCT a.nome SEPARATOR ', ') AS autores,
+                    MAX(c.nome) AS categoria
+                FROM livros l
+                LEFT JOIN livrosautores la ON l.livro_id = la.livro_id
+                LEFT JOIN autores a ON la.autor_id = a.autor_id
+                LEFT JOIN livroscategorias lc ON l.livro_id = lc.livro_id
+                LEFT JOIN categorias c ON lc.categoria_id = c.categoria_id
+                WHERE l.{} = %s
+                GROUP BY l.livro_id, l.titulo, l.isbn, l.ano_publicacao, 
+                        l.editora, l.quantidade_copias, l.localizacao_estante
+            """.format(search_type)
+
+            cursor = self.connection.cursor(dictionary=True) # type: ignore
+            cursor.execute(query, (search_value,))
+            result = cursor.fetchone()
+            cursor.close()
+
+            if not result:
+                messagebox.showwarning("Aviso", "Livro não encontrado!")
+                return
+
+            self.display_book_info_for_deletion(result)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao buscar livro: {str(e)}")
+
+    def display_book_info_for_deletion(self, book_data):
+        """Exibe as informações do livro e botão de deleção"""
+        try:
+            # Limpar frame de informações
+            for widget in self.book_info_frame.winfo_children():
+                widget.destroy()
+
+            # Armazenar ID do livro
+            self.book_to_delete = book_data['livro_id']
+
+            # Criar labels com informações do livro
+            info_text = f"""
+            Título: {book_data['titulo']}
+            ISBN: {book_data['isbn']}
+            Ano de Publicação: {book_data['ano_publicacao']}
+            Editora: {book_data['editora']}
+            Quantidade de Cópias: {book_data['quantidade_copias']}
+            Localização na Estante: {book_data['localizacao_estante']}
+            Autores: {book_data['autores'] if book_data['autores'] else 'Nenhum'}
+            Categoria: {book_data['categoria'] if book_data['categoria'] else 'Nenhuma'}
+            """
+
+            tk.Label(
+                self.book_info_frame,
+                text=info_text,
+                justify=tk.LEFT,
+                padx=10,
+                pady=5
+            ).pack()
+
+            # Criar um estilo específico para o botão de deletar
+            delete_button_style = self.button_style.copy()  # Copia o estilo base
+            delete_button_style.update({
+                'bg': 'red',
+                'fg': 'white'
+            })
+
+            # Botão para deletar
+            tk.Button(
+                self.book_info_frame,
+                text="Apagar Livro",
+                command=self.confirm_deletion,
+                **delete_button_style
+            ).pack(pady=10)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao exibir informações do livro: {str(e)}")
+
+    def confirm_deletion(self):
+        """Solicita confirmação do usuário antes de deletar o livro"""
+        if messagebox.askyesno(
+            "Confirmar Exclusão",
+            "Tem certeza que deseja apagar este livro?\nEsta ação não pode ser desfeita!"
+        ):
+            self.delete_book_from_database()
+
+    def delete_book_from_database(self):
+        """Remove o livro e seus relacionamentos do banco de dados"""
+        try:
+            cursor = self.connection.cursor() # type: ignore
+            self.connection.rollback() # type: ignore
+            self.connection.start_transaction() # type: ignore
+
+            try:
+                # Remover relacionamentos com autores
+                cursor.execute(
+                    "DELETE FROM livrosautores WHERE livro_id = %s",
+                    (self.book_to_delete,)
+                )
+
+                # Remover relacionamentos com categorias
+                cursor.execute(
+                    "DELETE FROM livroscategorias WHERE livro_id = %s",
+                    (self.book_to_delete,)
+                )
+
+                # Remover o livro
+                cursor.execute(
+                    "DELETE FROM livros WHERE livro_id = %s",
+                    (self.book_to_delete,)
+                )
+
+                self.connection.commit() # type: ignore
+                messagebox.showinfo("Sucesso", "Livro deletado com sucesso!")
+
+                # Limpar a interface
+                self.search_entry.delete(0, tk.END)
+                for widget in self.book_info_frame.winfo_children():
+                    widget.destroy()
+
+            except Exception as e:
+                self.connection.rollback() # type: ignore
+                raise e
+            finally:
+                cursor.close()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao deletar livro: {str(e)}")
+
+    def print_book_interface(self):
+        """Cria a interface para exibir os livros armazenados no banco de dados"""
+        try:
+            self.clear_right_frames()
+
+            # Frame principal para exibição
+            self.print_frame = tk.LabelFrame(
+                self.main_frame, text="Livros Disponíveis", padx=10, pady=5
+            )
+            self.print_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+
+            # Campo de busca
+            search_frame = tk.Frame(self.print_frame)
+            search_frame.grid(row=0, column=0, sticky="ew", pady=5)
+
+            tk.Label(search_frame, text="Buscar:").grid(row=0, column=0, padx=5)
+            self.search_entry = tk.Entry(search_frame, width=40)
+            self.search_entry.grid(row=0, column=1, padx=5)
+            self.search_entry.bind("<KeyRelease>", lambda event: self.filter_books())
+
+            # Botão para exportar para CSV
+            tk.Button(
+                search_frame,
+                text="Exportar para CSV",
+                command=self.export_to_csv,
+                **self.button_style
+            ).grid(row=0, column=2, padx=5)
+
+            # Frame para tabela de exibição
+            self.table_frame = tk.Frame(self.print_frame)
+            self.table_frame.grid(row=1, column=0, sticky="nsew", pady=5)
+
+            # Configurar tabela
+            self.book_table = ttk.Treeview(
+                self.table_frame,
+                columns=(
+                    "ID", "Título", "ISBN", "Ano", "Editora", "Cópias", "Estante", "Categoria", "Autores"
+                ),
+                show="headings",
+                height=15
+            )
+            self.book_table.grid(row=0, column=0, sticky="nsew")
+
+            # Configurar colunas
+            self.book_table.heading("ID", text="ID")
+            self.book_table.heading("Título", text="Título")
+            self.book_table.heading("ISBN", text="ISBN")
+            self.book_table.heading("Ano", text="Ano")
+            self.book_table.heading("Editora", text="Editora")
+            self.book_table.heading("Cópias", text="Cópias")
+            self.book_table.heading("Estante", text="Estante")
+            self.book_table.heading("Categoria", text="Categoria")
+            self.book_table.heading("Autores", text="Autores")
+
+            # Ajustar largura das colunas
+            self.book_table.column("ID", width=50, anchor="center")
+            self.book_table.column("Título", width=200, anchor="w")
+            self.book_table.column("ISBN", width=100, anchor="center")
+            self.book_table.column("Ano", width=80, anchor="center")
+            self.book_table.column("Editora", width=150, anchor="w")
+            self.book_table.column("Cópias", width=80, anchor="center")
+            self.book_table.column("Estante", width=100, anchor="w")
+            self.book_table.column("Categoria", width=150, anchor="w")
+            self.book_table.column("Autores", width=200, anchor="w")
+
+            # Scrollbar para a tabela
+            scrollbar = ttk.Scrollbar(self.table_frame, orient="vertical", command=self.book_table.yview)
+            self.book_table.configure(yscrollcommand=scrollbar.set)
+            scrollbar.grid(row=0, column=1, sticky="ns")
+
+            # Carregar dados do banco de dados
+            self.fetch_books_from_database()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar interface de exibição: {str(e)}")
+
+    def fetch_books_from_database(self):
+        """Busca os dados dos livros no banco de dados e exibe na tabela"""
+        try:
+            query = """
+                SELECT 
+                    l.livro_id, 
+                    l.titulo, 
+                    l.isbn, 
+                    l.ano_publicacao, 
+                    l.editora, 
+                    l.quantidade_copias, 
+                    l.localizacao_estante,
+                    GROUP_CONCAT(DISTINCT a.nome SEPARATOR ', ') AS autores,
+                    MAX(c.nome) AS categoria
+                FROM livros l
+                LEFT JOIN livrosautores la ON l.livro_id = la.livro_id
+                LEFT JOIN autores a ON la.autor_id = a.autor_id
+                LEFT JOIN livroscategorias lc ON l.livro_id = lc.livro_id
+                LEFT JOIN categorias c ON lc.categoria_id = c.categoria_id
+                GROUP BY 
+                    l.livro_id, 
+                    l.titulo, 
+                    l.isbn, 
+                    l.ano_publicacao, 
+                    l.editora, 
+                    l.quantidade_copias, 
+                    l.localizacao_estante;
+            """
+            connection = get_database_connection()
+            if not connection:
+                raise Exception("Não foi possível conectar ao banco de dados.")
+
+            books = read_data(connection, query)
+            if not books:  # Se não houver resultados, inicializar como lista vazia
+                books = []
+
+            # Limpar tabela antes de carregar novos dados
+            for row in self.book_table.get_children():
+                self.book_table.delete(row)
+
+            # Inserir dados na tabela
+            for book in books:
+                self.book_table.insert(
+                    "",
+                    "end",
+                    values=(
+                        book[0],  # ID # type: ignore
+                        book[1],  # Título # type: ignore
+                        book[2],  # ISBN # type: ignore
+                        book[3],  # Ano de Publicação # type: ignore
+                        book[4],  # Editora # type: ignore
+                        book[5],  # Quantidade de Cópias # type: ignore
+                        book[6],  # Localização na Estante # type: ignore
+                        book[8] if book[8] else "Sem Categoria",  # Categoria # type: ignore
+                        book[7] if book[7] else "Sem Autores"  # Autores # type: ignore
+                    )
+                )
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao buscar dados dos livros: {str(e)}")
+
+    def filter_books(self):
+        """Filtra os livros exibidos na tabela com base no texto de busca"""
+        try:
+            search_text = self.search_entry.get().strip().lower()
+
+            # Se o campo de busca estiver vazio, recarregar todos os dados
+            if not search_text:
+                self.fetch_books_from_database()
+                return
+
+            # Filtrar os resultados na tabela
+            for row in self.book_table.get_children():
+                values = self.book_table.item(row, "values")
+                if any(search_text in str(value).lower() for value in values):
+                    self.book_table.reattach(row, '', 'end')  # type: ignore # Reexibe a linha 
+                else:
+                    self.book_table.detach(row)  # Oculta a linha
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao filtrar livros: {str(e)}")
+
+    def export_to_csv(self):
+        """Exporta os dados exibidos na tabela para um arquivo CSV"""
+        try:
+            # Abrir diálogo para salvar arquivo
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv")],
+                title="Salvar como"
+            )
+            if not filename:
+                return
+
+            # Obter dados da tabela
+            rows = [self.book_table.item(row, "values") for row in self.book_table.get_children()]
+
+            # Escrever dados no arquivo CSV
+            with open(filename, mode="w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                # Cabeçalhos
+                writer.writerow(["ID", "Título", "ISBN", "Ano", "Editora", "Cópias", "Estante", "Categoria", "Autores"])
+                # Dados
+                writer.writerows(rows)
+
+            messagebox.showinfo("Sucesso", f"Dados exportados com sucesso para {filename}")
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao exportar dados para CSV: {str(e)}")
 
     def clear_fields(self):
         """Limpa todos os campos do formulário"""

@@ -232,8 +232,8 @@ class UserManagementInterface:
         books_menu_options = [
             ("Criar Livro", self.books_interface.create_book_interface),
             ("Atualizar Livro", self.books_interface.update_book_interface),
-            # ("Deletar Livro", self.books_interface.delete_book_interface),
-            # ("Buscar Livro", self.books_interface.print_book_interface),
+            ("Deletar Livro", self.books_interface.delete_book_interface),
+            ("Buscar Livro", self.books_interface.print_book_interface),
         ]
 
         for text, command in books_menu_options:
