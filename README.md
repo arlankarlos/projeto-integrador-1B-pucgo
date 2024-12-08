@@ -24,6 +24,21 @@ DB_PASSWORD='root' # sua senha mysql
 DB_NAME='db_biblioteca'
 ```
 
+#### 1 - Modelagem Conceitual
+```
+https://app.brmodeloweb.com/#!/publicview/67558f31ec67b41b61bd6eb8
+```
+
+#### 2 - Modelagem Lógica
+```
+https://app.brmodeloweb.com/#!/publicview/67558f47ec67b41b61bd6ebe
+```
+
+#### 3 - Modelagem Física
+```
+https://lucid.app/lucidchart/5f54a857-11a9-4fd6-b8d5-26f7a8e0732a/edit?viewport_loc=-611%2C-158%2C2272%2C1716%2C0_0&invitationId=inv_6db8bbf0-fddc-492f-848c-d49ba34210c3
+```
+
 ## Descrição
 
 O programa é um sistema de gerenciamento de biblioteca que permite a administração de usuários, livros, autores, categorias, empréstimos e reservas. Ele utiliza uma interface gráfica construída com `tkinter` para interagir com o usuário e um banco de dados para armazenar as informações.
