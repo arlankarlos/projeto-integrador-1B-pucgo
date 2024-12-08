@@ -35,7 +35,7 @@ class UserManagementInterface:
         self.create_buttons()
 
         # Exibir a interface inicial
-        self.home_interface()         
+        self.home_interface()
 
     def ensure_connection(self):
         """
